@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:WindowedApplication xmlns:mx="http://www.adobe.com/2006/mxml" layout="absolute" width="360" height="175"
+	creationComplete="init()" showStatusBar="false" horizontalScrollPolicy="off" verticalScrollPolicy="off">
+	
+	<mx:Style source="assets/css/MainStyles.css"/>
+	
+	<mx:Script>
+        <![CDATA[
+			import mx.graphics.codec.JPEGEncoder;
+			import mx.rpc.events.FaultEvent;
+            import flash.media.Camera;
+            
+            [Bindable] private var myCamera:Camera;
+            [Bindable] private var vid:Video;
+            private var interval:int;
+            private var myImageBytes:ByteArray;
+            
+            private function init():void {
+                myCamera = Camera.getCamera();
+                vid = new Video(myCamera.width,myCamera.height);
+                vid.attachCamera(myCamera);
+                this.vidDisplay.addChild(vid);
+                startInterval();
+            }
+            private function startInterval():void{
+            	var delay:int = this.delayStepper.value * 1000;
+            	if (interval){
+            		stopInterval();
+            	}
+            	interval = setInterval(captureImage,delay);
+            }
+            private function stopInterval():void{
+            	clearInterval(interval);
+            }
+            private function onDelayChange():void{
+            	startInterval();
+            }
+            private function captureVideo():void{
+            	
+            }
+            private function captureImage(overrideAutoPublish:Boolean=false):void{
+            	var snapshot:BitmapData = new BitmapData(480,360,true);
+            	var snapshotbitmap:Bitmap = new Bitmap(snapshot);
+            	this.lastSnapDisplay.addChild(snapshotbitmap);
+            	snapshot.draw(vid);
+            	if (this.autoPubCB.selected || overrideAutoPublish){
+            		uploadImage(snapshotbitmap);
+            	}
+            }
+            private function uploadVideo():void{
+            	
+            }
+            private function uploadImage(bitmap:Bitmap):void{
+            	var jpegEncoder:JPEGEncoder = new JPEGEncoder(100);
+            	var imageBytes:ByteArray = jpegEncoder.encode(bitmap.bitmapData);
+            	this.imageRO.saveImage(imageBytes);
+            }
+            private function onROFault(event:FaultEvent):void{
+            	trace(event);
+            }
+        ]]>
+    </mx:Script>
+    
+    <mx:RemoteObject id="imageRO" destination="ColdFusion" endpoint="http://portfolio.lanctr.com/flex2gateway/"
+    	source="com.CamStream.ImageService" fault="onROFault(event)" showBusyCursor="true">
+    	
+    </mx:RemoteObject>
+    
+	<mx:HBox horizontalAlign="center" left="10" top="10" right="10">
+		<mx:UIComponent id="vidDisplay" width="160" height="120"/>
+		<mx:UIComponent id="lastSnapDisplay" width="160" height="120"/>
+	</mx:HBox>
+	
+	<mx:HBox bottom="10" right="10" left="10">
+		<!--mx:Button label="Capture Video Clip" width="100%"/-->
+		<mx:Button label="Capture Image" width="100%" click="captureImage(true)"/>
+		<mx:CheckBox id="autoPubCB" label="Auto Publish" selected="true"/>
+		<mx:FormItem label="Delay">
+			<mx:NumericStepper id="delayStepper" maximum="90" minimum="1" stepSize="5" value="15" change="onDelayChange()"
+				toolTip="Seconds between image uploads"/>
+		</mx:FormItem>
+	</mx:HBox>
+</mx:WindowedApplication>
